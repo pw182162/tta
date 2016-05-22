@@ -1,0 +1,182 @@
+buildscript {
+  repositories {
+    jcenter()
+  }
+  dependencies {
+    classpath "net.researchgate:gradle-release:2.0.1"
+    classpath 'at.schmutterer.oss.gradle:gradle-openjpa:0.2.0'
+  }
+}
+
+apply plugin: 'java'
+apply plugin: 'application'
+apply plugin: 'openjpa'
+
+openjpa {
+
+    files = fileTree(sourceSets.main.output.classesDir).matching {
+
+    include '**/model/TrackInfo.java'
+    }
+
+}
+
+sourceCompatibility = '1.7'
+targetCompatibility = '1.7'
+
+group = 'org'
+version = '0.1'
+mainClassName = 'org.app.Application'
+
+String swtJar
+switch(System.getProperty('os.name').toLowerCase().split()[0])
+{
+case 'mac':
+	swtJar = 'org.eclipse.swt.cocoa.macosx.x86_64'
+	applicationDefaultJvmArgs.add('-XstartOnFirstThread')
+	break
+
+case 'windows':
+	swtJar = 'org.eclipse.swt.win32.win32.x86_64'
+	break
+
+default:
+	swtJar = 'org.eclipse.swt.gtk.linux.x86_64'
+	break
+}
+
+dependencies {
+	// Logging
+	compile 'org.slf4j:slf4j-log4j12:1.6.6'
+	compile 'log4j:log4j:1.2.7'
+
+	compile group: 'org.eclipse.swt', name: swtJar, version: '4.+'
+	archives group: 'org.eclipse.swt', name: 'org.eclipse.swt.gtk.linux.x86_64', version: '4.+'
+	archives group: 'org.eclipse.swt', name: 'org.eclipse.swt.gtk.linux.x86', version: '4.+'
+	archives group: 'org.eclipse.swt', name: 'org.eclipse.swt.win32.win32.x86_64', version: '4.+'
+	archives group: 'org.eclipse.swt', name: 'org.eclipse.swt.win32.win32.x86', version: '4.+'
+	archives group: 'org.eclipse.swt', name: 'org.eclipse.swt.cocoa.macosx.x86_64', version: '4.+'
+	
+	compile 'org.eclipse:jface:3.2.1-M20060908-1000'
+
+	compile 'com.mpatric:mp3agic:0.8.3'
+	compile 'org:jaudiotagger:2.0.3'
+	compile 'javazoom:jlayer:1.0.1'
+	
+	compile 'org.jsoup:jsoup:1.8.3'
+	
+//	compile files('libs/aacdecoder-android-0.8.jar')
+	
+	// OpenJPA
+	compile 'org.apache.openjpa:openjpa:2.4.0'
+	compile 'org.postgresql:postgresql:9.4-1200-jdbc41'
+
+	testCompile 'junit:junit:4.12'
+	
+	
+}
+
+ext.defaultManifest = manifest {
+	attributes('Main-Class': mainClassName,
+	           'Implementation-Version': version)
+}
+
+jar {
+	manifest = project.manifest {
+		from defaultManifest
+	}
+
+	baseName = 'BrailleZephyr'
+}
+
+task linux32Jar(type: Jar) {
+	appendix = 'linux-x86'
+
+	manifest = project.manifest {
+		from defaultManifest
+	}
+
+	from {
+		zipTree configurations.archives.find { it.getName().contains('linux.x86-') }
+	}
+
+	with jar
+}
+
+task linux64Jar(type: Jar) {
+	appendix = 'linux-x86_64'
+
+	manifest = project.manifest {
+		from defaultManifest
+	}
+
+	from {
+		zipTree configurations.archives.find { it.getName().contains('linux.x86_64') }
+	}
+
+	with jar
+}
+
+task win32Jar(type: Jar) {
+	appendix = 'windows-x86'
+
+	manifest = project.manifest {
+		from defaultManifest
+	}
+
+	from {
+		zipTree configurations.archives.find { it.getName().contains('win32.x86-') }
+	}
+
+	with jar
+}
+
+task win64Jar(type: Jar) {
+	appendix = 'windows-x86_64'
+
+	manifest = project.manifest {
+		from defaultManifest
+	}
+
+	from {
+		zipTree configurations.archives.find { it.getName().contains('win32.x86_64') }
+	}
+
+	with jar
+}
+
+task macxJar(type: Jar) {
+	appendix = 'macosx-x86_64'
+
+	manifest = project.manifest {
+		from defaultManifest
+	}
+
+	from {
+		zipTree configurations.archives.find { it.getName().contains('macosx.x86_64') }
+	}
+
+	with jar
+}
+
+task allJars {
+	dependsOn linux32Jar
+	dependsOn linux64Jar
+	dependsOn win32Jar
+	dependsOn win64Jar
+	dependsOn macxJar
+}
+
+run {
+	systemProperties['braillezephyr.version'] = version
+}
+
+apply plugin: 'eclipse'
+
+task wrapper(type: Wrapper) {
+	gradleVersion = '2.5'
+}
+
+repositories {
+	mavenCentral()
+}
